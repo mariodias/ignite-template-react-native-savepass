@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useForm } from 'react-hook-form';
@@ -23,6 +23,13 @@ interface FormData {
   password: string;
 }
 
+type LoginDataProps = Array<{
+  id: string;
+  title: string;
+  email: string;
+  password: string;
+}>;
+
 const schema = Yup.object().shape({
   service_name: Yup.string().required('Nome do serviço é obrigatório!'),
   email: Yup.string().email('Não é um email válido').required('Email é obrigatório!'),
@@ -30,6 +37,10 @@ const schema = Yup.object().shape({
 })
 
 export function RegisterLoginData() {
+
+  const [searchListData, setSearchListData] = useState<FormData>({} as FormData);
+  const [data, setData] = useState<FormData>({} as FormData);
+  
   const { navigate } = useNavigation();
   const {
     control,
@@ -41,15 +52,36 @@ export function RegisterLoginData() {
     resolver: yupResolver(schema)
   });
 
-  async function handleRegister(formData: FormData) {
+  async function handleRegister(formData: FormData[]) {
     const newLoginData = {
       id: String(uuid.v4()),
       ...formData
     }
 
-    const dataKey = '@savepass:logins';
+    try {
+      const dataKey = '@savepass:logins';
 
-    // Save data on AsyncStorage and navigate to 'Home' screen
+      const data = await AsyncStorage.getItem(dataKey);
+
+      const currentData = data ? JSON.parse(data) : [];
+
+      const totalData = [
+        ...currentData,
+        newLoginData,
+      ];
+      
+      await AsyncStorage.setItem(dataKey, JSON.stringify(totalData));
+
+      //setData(totalData);
+      //setSearchListData(totalData);
+
+      navigate("Home");
+      
+    } catch (error) {
+      console.log(error);
+      
+    }
+
   }
 
   return (
@@ -66,33 +98,29 @@ export function RegisterLoginData() {
             title="Nome do serviço"
             name="service_name"
             error={
-              // Replace here with real content
-              'Has error ? show error message'
+              errors.service_name && errors.service_name.message
             }
             control={control}
             autoCapitalize="sentences"
             autoCorrect
           />
-          <Input
+      <Input
             testID="email-input"
             title="E-mail"
             name="email"
-            error={
-              // Replace here with real content
-              'Has error ? show error message'
-            }
+            error={errors.email
+            &&
+            errors.email.message}
             control={control}
             autoCorrect={false}
             autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <Input
+            keyboardType="email-address" />          
+            <Input
             testID="password-input"
             title="Senha"
             name="password"
             error={
-              // Replace here with real content
-              'Has error ? show error message'
+              errors.password && errors.password.message
             }
             control={control}
             secureTextEntry
